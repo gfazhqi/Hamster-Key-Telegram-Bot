@@ -21,14 +21,19 @@ REQUIRED_CHANNEL = "@your_channel_name"  # Ganti dengan nama channel Anda
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.CRITICAL
+    level=logging.DEBUG  # Ubah ke DEBUG untuk lebih banyak logging
 )
 
 logger = logging.getLogger(__name__)
 
 async def is_user_joined(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    chat_member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=update.effective_chat.id)
-    return chat_member.status in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]
+    try:
+        chat_member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=update.effective_chat.id)
+        logger.debug(f"User status: {chat_member.status}")
+        return chat_member.status in [ChatMember.MEMBER, ChatMember.ADMINISTRATOR, ChatMember.OWNER]
+    except Exception as e:
+        logger.error(f"Error checking user membership: {e}")
+        return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_joined(update, context):
@@ -107,6 +112,15 @@ async def all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await generate_keys(update, context, chosen_game=i+1)
 
 if __name__ == '__main__':
+    logger.debug(f"TOKEN: {TOKEN or TOKEN_INSECURE}")
+    
+    # Reset event loop
+    try:
+        asyncio.get_event_loop().close()
+    except:
+        pass
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    
     application = ApplicationBuilder().token(TOKEN or TOKEN_INSECURE).build()
     logger.info("Server is running. Awaiting users...")
 
